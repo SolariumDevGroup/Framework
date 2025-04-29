@@ -1,137 +1,6 @@
---// ULTRA FRAMEWORK DRAWING - PARTIE 1/7 - Chargement + Setup
-
-local Drawing = Drawing or error("Drawing API not available")
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
-local SoundService = game:GetService("SoundService")
-local Debris = game:GetService("Debris")
-
-local UI = {}
-local drawings = {}
-local elements = {}
-local notifications = {}
-
-local window = {
-    Width = 600,
-    Height = 450,
-    X = 500,
-    Y = 150,
-    Title = "Altryum Framework",
-    Draggable = true,
-    Visible = false,
-    Elements = {},
-    Categories = {},
-    SelectedCategory = nil,
-    CurrentCategory = nil,
-    Colors = {
-        Background = Color3.fromRGB(20,20,20),
-        Border = Color3.fromRGB(30,30,30),
-        Accent = Color3.fromRGB(0,135,255),
-        Text = Color3.fromRGB(255,255,255)
-    }
-}
-
-local dragging = false
-local dragOffset = Vector2.new()
-local isMinimized = false
-local toggleUIKey = Enum.KeyCode.RightShift
-
-local function CreateDrawing(class, props)
-    local obj = Drawing.new(class)
-    for prop, val in pairs(props) do
-        obj[prop] = val
-    end
-    table.insert(drawings, obj)
-    return obj
-end
-
-local function Tween(obj, prop, goal, time)
-    local start = obj[prop]
-    local startTime = tick()
-    local conn
-    conn = RunService.RenderStepped:Connect(function()
-        local alpha = math.clamp((tick()-startTime)/time, 0, 1)
-        obj[prop] = start:Lerp(goal, alpha)
-        if alpha >= 1 then
-            conn:Disconnect()
-        end
-    end)
-end
-
-local function PlaySound()
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://6026984224"
-    sound.Volume = 2
-    sound.Parent = SoundService
-    sound:Play()
-    Debris:AddItem(sound, 2)
-end
-
---== Loading Screen ==--
-
-local loadingScreen = {}
-loadingScreen.Frame = CreateDrawing("Square", {
-    Size = Vector2.new(400, 250),
-    Position = Vector2.new((workspace.CurrentCamera.ViewportSize.X-400)/2, (workspace.CurrentCamera.ViewportSize.Y-250)/2),
-    Color = window.Colors.Background,
-    Thickness = 2,
-    Filled = true,
-    Visible = true
-})
-
-loadingScreen.BarOutline = CreateDrawing("Square", {
-    Size = Vector2.new(300, 20),
-    Position = loadingScreen.Frame.Position + Vector2.new(50, 180),
-    Color = window.Colors.Border,
-    Thickness = 2,
-    Filled = false,
-    Visible = true
-})
-
-loadingScreen.BarFill = CreateDrawing("Square", {
-    Size = Vector2.new(0, 20),
-    Position = loadingScreen.BarOutline.Position,
-    Color = window.Colors.Accent,
-    Filled = true,
-    Visible = true
-})
-
-loadingScreen.Logo = CreateDrawing("Text", {
-    Text = "MY LOGO",
-    Size = 30,
-    Center = true,
-    Position = loadingScreen.Frame.Position + Vector2.new(200, 60),
-    Color = window.Colors.Accent,
-    Outline = true,
-    Visible = true
-})
-
-loadingScreen.Text = CreateDrawing("Text", {
-    Text = "Chargement...",
-    Size = 20,
-    Center = true,
-    Position = loadingScreen.Frame.Position + Vector2.new(200, 150),
-    Color = window.Colors.Text,
-    Outline = true,
-    Visible = true
-})
-
-task.spawn(function()
-    for i = 1, 100 do
-        loadingScreen.BarFill.Size = Vector2.new(3*i, 20)
-        wait(0.02)
-    end
-    -- Suppression loading
-    for _,obj in pairs(loadingScreen) do
-        obj.Visible = false
-        obj:Remove()
-    end
-    window.Visible = true
-end)
-
---// ULTRA FRAMEWORK DRAWING - PARTIE 2/7 - Fenêtre + Dragging + Minimize
-
 function UI:CreateMain()
+    -- Coins arrondis simulés : on crée plusieurs rectangles superposés
+
     window.MainOutline = CreateDrawing("Square", {
         Size = Vector2.new(window.Width, window.Height),
         Position = Vector2.new(window.X, window.Y),
@@ -141,16 +10,46 @@ function UI:CreateMain()
     })
 
     window.MainBackground = CreateDrawing("Square", {
-        Size = Vector2.new(window.Width-4, window.Height-4),
-        Position = Vector2.new(window.X+2, window.Y+2),
+        Size = Vector2.new(window.Width-8, window.Height-8),
+        Position = window.MainOutline.Position + Vector2.new(4,4),
+        Color = window.Colors.Background,
+        Filled = true,
+        Visible = true
+    })
+
+    -- Coins arrondis (effet visuel en superposant)
+    window.TopLeftRound = CreateDrawing("Circle", {
+        Radius = 8,
+        Position = window.MainOutline.Position,
+        Color = window.Colors.Background,
+        Filled = true,
+        Visible = true
+    })
+    window.TopRightRound = CreateDrawing("Circle", {
+        Radius = 8,
+        Position = window.MainOutline.Position + Vector2.new(window.Width-8,0),
+        Color = window.Colors.Background,
+        Filled = true,
+        Visible = true
+    })
+    window.BottomLeftRound = CreateDrawing("Circle", {
+        Radius = 8,
+        Position = window.MainOutline.Position + Vector2.new(0,window.Height-8),
+        Color = window.Colors.Background,
+        Filled = true,
+        Visible = true
+    })
+    window.BottomRightRound = CreateDrawing("Circle", {
+        Radius = 8,
+        Position = window.MainOutline.Position + Vector2.new(window.Width-8,window.Height-8),
         Color = window.Colors.Background,
         Filled = true,
         Visible = true
     })
 
     window.TitleBar = CreateDrawing("Square", {
-        Size = Vector2.new(window.Width-4, 40),
-        Position = Vector2.new(window.X+2, window.Y+2),
+        Size = Vector2.new(window.Width-8, 40),
+        Position = window.MainOutline.Position + Vector2.new(4,4),
         Color = window.Colors.Border,
         Filled = true,
         Visible = true
@@ -161,15 +60,15 @@ function UI:CreateMain()
         Size = 25,
         Center = true,
         Outline = true,
-        Position = window.TitleBar.Position + Vector2.new((window.Width-4)/2, 5),
+        Position = window.TitleBar.Position + Vector2.new((window.Width-8)/2, 5),
         Color = window.Colors.Text,
         Visible = true
     })
 
     -- Bouton Minimiser
     window.MinimizeButton = CreateDrawing("Square", {
-        Size = Vector2.new(20,20),
-        Position = window.TitleBar.Position + Vector2.new(window.Width-45, 10),
+        Size = Vector2.new(24,24),
+        Position = window.TitleBar.Position + Vector2.new(window.Width-50,8),
         Color = window.Colors.Accent,
         Filled = true,
         Visible = true
@@ -179,99 +78,30 @@ function UI:CreateMain()
         Text = "-",
         Size = 20,
         Center = true,
-        Position = window.MinimizeButton.Position + Vector2.new(10,2),
+        Position = window.MinimizeButton.Position + Vector2.new(12,2),
         Color = window.Colors.Text,
         Visible = true
     })
 
-    -- Zone Catégories
+    -- Zone Catégories (PLUS LARGE)
     window.CategoryFrame = CreateDrawing("Square", {
-        Size = Vector2.new(120, window.Height-40),
-        Position = window.MainBackground.Position + Vector2.new(0,40),
-        Color = Color3.fromRGB(25, 25, 25),
+        Size = Vector2.new(180, window.Height-48),
+        Position = window.MainOutline.Position + Vector2.new(4,44),
+        Color = Color3.fromRGB(25,25,25),
         Filled = true,
         Visible = true
     })
 
-    -- Zone Éléments
+    -- Zone Eléments
     window.ElementFrame = CreateDrawing("Square", {
-        Size = Vector2.new(window.Width-120-4, window.Height-40-4),
-        Position = window.MainBackground.Position + Vector2.new(120,40),
-        Color = Color3.fromRGB(20, 20, 20),
+        Size = Vector2.new(window.Width-180-8, window.Height-48),
+        Position = window.MainOutline.Position + Vector2.new(184,44),
+        Color = Color3.fromRGB(20,20,20),
         Filled = true,
         Visible = true
     })
 end
 
-function UI:SetupDragging()
-    UIS.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mouse = UIS:GetMouseLocation()
-            if mouse.X >= window.TitleBar.Position.X and mouse.X <= window.TitleBar.Position.X + window.TitleBar.Size.X
-            and mouse.Y >= window.TitleBar.Position.Y and mouse.Y <= window.TitleBar.Position.Y + window.TitleBar.Size.Y then
-                dragging = true
-                dragOffset = Vector2.new(mouse.X, mouse.Y) - window.MainOutline.Position
-            end
-
-            if mouse.X >= window.MinimizeButton.Position.X and mouse.X <= window.MinimizeButton.Position.X + window.MinimizeButton.Size.X
-            and mouse.Y >= window.MinimizeButton.Position.Y and mouse.Y <= window.MinimizeButton.Position.Y + window.MinimizeButton.Size.Y then
-                -- Minimiser / Agrandir
-                isMinimized = not isMinimized
-                if isMinimized then
-                    for _,obj in pairs(drawings) do
-                        if obj ~= window.MinimizeButton and obj ~= window.MinimizeText then
-                            obj.Visible = false
-                        end
-                    end
-                else
-                    for _,obj in pairs(drawings) do
-                        obj.Visible = true
-                    end
-                end
-            end
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        if dragging then
-            local mouse = UIS:GetMouseLocation()
-            local newPos = Vector2.new(mouse.X, mouse.Y) - dragOffset
-            window.MainOutline.Position = newPos
-            window.MainBackground.Position = newPos + Vector2.new(2,2)
-            window.TitleBar.Position = newPos + Vector2.new(2,2)
-            window.TitleText.Position = window.TitleBar.Position + Vector2.new((window.Width-4)/2,5)
-            window.MinimizeButton.Position = window.TitleBar.Position + Vector2.new(window.Width-45,10)
-            window.MinimizeText.Position = window.MinimizeButton.Position + Vector2.new(10,2)
-            window.CategoryFrame.Position = window.MainBackground.Position + Vector2.new(0,40)
-            window.ElementFrame.Position = window.MainBackground.Position + Vector2.new(120,40)
-        end
-    end)
-end
-
-function UI:SetupShiftToggle()
-    UIS.InputBegan:Connect(function(input)
-        if input.KeyCode == toggleUIKey then
-            window.Visible = not window.Visible
-            for _,obj in pairs(drawings) do
-                if obj then
-                    obj.Visible = window.Visible
-                end
-            end
-        end
-    end)
-end
-
-function UI:Init()
-    self:CreateMain()
-    self:SetupDragging()
-    self:SetupShiftToggle()
-end
 
 --// ULTRA FRAMEWORK DRAWING - PARTIE 3/7 - Catégories + Boutons de base
 
